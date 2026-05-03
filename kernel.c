@@ -204,7 +204,7 @@ void shell() {
         } else if (!strcmp(cmd, "pwd")) {
             print_string("/\n");
         } else if (!strcmp(cmd, "ver")) {
-            print_string("TuxOS version Early 0.1, not for public.\n");
+            print_string("TuxOS version Early 0.1.\n");
         } else if (!strcmp(cmd, "tux")) {
             print_string(
                 "   .--.\n"
@@ -230,7 +230,7 @@ void shell() {
 void kernel_main() {
     clear_screen();
     print_string("Welcome to TuxOS!\n");
-    print_string("Version: Early 0.1, not for public.\n");
+    print_string("Version: Early 0.1.\n");
     shell();
     while (1) {}
 }
