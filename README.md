@@ -7,7 +7,7 @@
 TuxOS is a minimal 32‑bit operating system for x86.  
 It has its own bootloader, a VGA text‑mode console, PS/2 keyboard driver with shift support, and a command‑line shell.
 
-**Version:** Early 0.1 (development preview – not for public use)
+**Version:** Early 0.1 (development preview)
 
 ## Features
 
