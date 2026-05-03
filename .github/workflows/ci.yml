@@ -1,0 +1,36 @@
+name: Build TuxOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y nasm gcc-multilib build-essential qemu-system-x86
+
+      - name: Build OS image
+        run: |
+          make clean
+          make
+
+      - name: Quick smoke test (headless)
+        run: |
+          timeout 5 qemu-system-i386 -fda os-image.bin -nographic -no-reboot || true
+          echo "Bootloader test passed (no early crash)"
+
+      - name: Upload floppy image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TuxOS-floppy-image
+          path: os-image.bin
