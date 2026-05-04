@@ -1,12 +1,4 @@
-/* TuxOS - a minimal operating system
- * Copyright (C) 2025  Your Name
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * ...
- */
+/* kernel.c - TuxOS 0.2 text-mode shell */
 
 #define VIDEO_MEMORY 0xB8000
 #define MAX_ROWS 25
@@ -19,7 +11,7 @@
 static int cursor_row = 0;
 static int cursor_col = 0;
 
-/* --- Low‑level I/O --- */
+/* --- Low‑level I/O ports --- */
 static inline unsigned char inb(unsigned short port) {
     unsigned char ret;
     asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
@@ -34,7 +26,7 @@ static inline void outw(unsigned short port, unsigned short data) {
     asm volatile ("outw %0, %1" :: "a"(data), "Nd"(port));
 }
 
-/* --- VGA helpers --- */
+/* --- VGA text-mode helpers --- */
 static char *get_video_ptr(int row, int col) {
     return (char *)(VIDEO_MEMORY + 2 * (row * MAX_COLS + col));
 }
@@ -50,7 +42,6 @@ void clear_screen() {
 }
 
 static void scroll_up() {
-    /* Move rows up */
     for (int r = 1; r < MAX_ROWS; r++) {
         for (int c = 0; c < MAX_COLS; c++) {
             char *dst = get_video_ptr(r - 1, c);
@@ -59,7 +50,6 @@ static void scroll_up() {
             *(dst + 1) = *(src + 1);
         }
     }
-    /* Clear last row */
     for (int c = 0; c < MAX_COLS; c++) {
         char *ptr = get_video_ptr(MAX_ROWS - 1, c);
         *ptr = ' ';
@@ -89,7 +79,6 @@ void print_char(char c) {
         scroll_up();
     }
 
-    /* Update hardware cursor */
     unsigned short pos = cursor_row * MAX_COLS + cursor_col;
     outb(0x3D4, 14);
     outb(0x3D5, (pos >> 8) & 0xFF);
@@ -99,6 +88,31 @@ void print_char(char c) {
 
 void print_string(const char *str) {
     while (*str) print_char(*str++);
+}
+
+/* --- Integer to string conversion --- */
+static void reverse_str(char *s, int len) {
+    for (int i = 0; i < len / 2; i++) {
+        char tmp = s[i];
+        s[i] = s[len - 1 - i];
+        s[len - 1 - i] = tmp;
+    }
+}
+
+void int_to_str(int num, char *buf) {
+    int i = 0;
+    int sign = 0;
+    if (num < 0) {
+        sign = 1;
+        num = -num;
+    }
+    do {
+        buf[i++] = '0' + (num % 10);
+        num /= 10;
+    } while (num);
+    if (sign) buf[i++] = '-';
+    buf[i] = '\0';
+    reverse_str(buf, i);
 }
 
 /* --- Keyboard with shift support --- */
@@ -161,10 +175,115 @@ int strcmp(const char *a, const char *b) {
     return *a - *b;
 }
 
-/* --- Power off (QEMU/Bochs/VirtualBox) --- */
-void power_off() {
-    outw(0x604, 0x2000);
-    asm volatile ("cli; hlt");
+int strlen(const char *s) {
+    int len = 0;
+    while (*s++) len++;
+    return len;
+}
+
+void strcpy(char *dst, const char *src) {
+    while (*src) *dst++ = *src++;
+    *dst = '\0';
+}
+
+/* Simple decimal to hex conversion */
+void print_hex(unsigned int num) {
+    char buf[16];
+    int i = 0;
+    do {
+        int digit = num % 16;
+        buf[i++] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
+        num /= 16;
+    } while (num > 0);
+    buf[i] = '\0';
+    /* reverse it */
+    for (int j = 0; j < i/2; j++) {
+        char t = buf[j];
+        buf[j] = buf[i-1-j];
+        buf[i-1-j] = t;
+    }
+    print_string(buf);
+}
+
+/* --- New commands supporting functions --- */
+
+/* Simple integer arithmetic parser: expects "<number><op><number>" no spaces */
+int calc_expression(const char *expr) {
+    int num1 = 0, num2 = 0;
+    char op = 0;
+    int i = 0;
+
+    // skip leading spaces
+    while (expr[i] == ' ') i++;
+    // read first number
+    while (expr[i] >= '0' && expr[i] <= '9') {
+        num1 = num1 * 10 + (expr[i] - '0');
+        i++;
+    }
+    // read operator
+    if (expr[i] == '+' || expr[i] == '-' || expr[i] == '*' || expr[i] == '/') {
+        op = expr[i];
+        i++;
+    } else {
+        return 0; // invalid
+    }
+    // read second number
+    while (expr[i] >= '0' && expr[i] <= '9') {
+        num2 = num2 * 10 + (expr[i] - '0');
+        i++;
+    }
+
+    switch (op) {
+        case '+': return num1 + num2;
+        case '-': return num1 - num2;
+        case '*': return num1 * num2;
+        case '/': if (num2) return num1 / num2; else return 0;
+        default: return 0;
+    }
+}
+
+/* ASCII table printer */
+void print_ascii_table() {
+    for (int i = 32; i < 127; i += 8) {
+        for (int j = 0; j < 8 && i+j < 127; j++) {
+            char buf[8];
+            buf[0] = i+j;
+            buf[1] = ' ';
+            buf[2] = '\0';
+            print_string(buf);
+        }
+        print_string("\n");
+    }
+}
+
+/* Cow ASCII art */
+void cow_say(const char *msg) {
+    int len = strlen(msg);
+    print_string(" ");
+    for (int i = 0; i < len + 2; i++) print_char('_');
+    print_string("\n< ");
+    print_string(msg);
+    print_string(" >\n ");
+    for (int i = 0; i < len + 2; i++) print_char('-');
+    print_string("\n        \\   ^__^\n         \\  (oo)\\_______\n            (__)\\       )\\/\\\n                ||----w |\n                ||     ||\n");
+}
+
+/* Fortune messages */
+void print_fortune() {
+    const char *fortunes[] = {
+        "You will write a cool OS.",
+        "Bug is just a feature waiting to be found.",
+        "Tux is silently judging your code.",
+        "Real programmers use butterflies.",
+        "Segmentation fault (core dumped) ... just kidding.",
+        "The answer is 42."
+    };
+    int n = sizeof(fortunes) / sizeof(fortunes[0]);
+    /* Not truly random – but we'll use a counter */
+    static int counter = 0;
+    int idx = counter++ % n;
+    print_string(fortunes[idx]);
+    print_string("\n");
 }
 
 /* --- Shell --- */
@@ -187,7 +306,9 @@ void shell() {
 
         if (!strcmp(cmd, "help")) {
             print_string("Available commands:\n");
-            print_string("help, whoami, echo, clear, uname, date, ls, pwd, ver, tux, shutdown, reboot\n");
+            print_string("help, whoami, echo, clear, uname, date, ls, pwd, ver, about, tux,\n");
+            print_string("shutdown, reboot, calc <expr>, hex <num>, random, ascii,\n");
+            print_string("cowsay <msg>, fortune, mem, uptime\n");
         } else if (!strcmp(cmd, "whoami")) {
             print_string("root\n");
         } else if (!strcmp(cmd, "echo")) {
@@ -198,13 +319,15 @@ void shell() {
         } else if (!strcmp(cmd, "uname")) {
             print_string("TuxOS\n");
         } else if (!strcmp(cmd, "date")) {
-            print_string("Sun May  3 12:00:00 UTC 2026\n");
+            print_string("Sun May  4 12:00:00 UTC 2026\n");
         } else if (!strcmp(cmd, "ls")) {
             print_string("No filesystem.\n");
         } else if (!strcmp(cmd, "pwd")) {
             print_string("/\n");
-        } else if (!strcmp(cmd, "ver")) {
-            print_string("TuxOS version Early 0.1.\n");
+        } else if (!strcmp(cmd, "ver") || !strcmp(cmd, "about")) {
+            print_string("TuxOS version 0.2 (Early)\n");
+            print_string("Made by PSPGuy\n");
+            print_string("Built with GCC + NASM, no GRUB\n");
         } else if (!strcmp(cmd, "tux")) {
             print_string(
                 "   .--.\n"
@@ -217,9 +340,43 @@ void shell() {
             );
         } else if (!strcmp(cmd, "shutdown")) {
             print_string("Powering off...\n");
-            power_off();
+            outw(0x604, 0x2000);
+            asm volatile ("cli; hlt");
         } else if (!strcmp(cmd, "reboot")) {
             outb(0x64, 0xFE);
+        } else if (!strcmp(cmd, "calc")) {
+            int result = calc_expression(args);
+            char buf[32];
+            int_to_str(result, buf);
+            print_string(buf);
+            print_string("\n");
+        } else if (!strcmp(cmd, "hex")) {
+            // convert decimal string to int manually
+            int num = 0;
+            const char *p = args;
+            while (*p >= '0' && *p <= '9') {
+                num = num * 10 + (*p - '0');
+                p++;
+            }
+            print_string("0x");
+            print_hex(num);
+            print_string("\n");
+        } else if (!strcmp(cmd, "random")) {
+            unsigned int tsc;
+            asm volatile ("rdtsc" : "=A" (tsc));
+            print_string("0x");
+            print_hex(tsc);
+            print_string("\n");
+        } else if (!strcmp(cmd, "ascii")) {
+            print_ascii_table();
+        } else if (!strcmp(cmd, "cowsay")) {
+            cow_say(args);
+        } else if (!strcmp(cmd, "fortune")) {
+            print_fortune();
+        } else if (!strcmp(cmd, "mem")) {
+            print_string("Memory information not available (work in progress).\n");
+        } else if (!strcmp(cmd, "uptime")) {
+            print_string("Uptime not available (no RTC yet).\n");
         } else {
             print_string("Unknown command. Type 'help'.\n");
         }
@@ -229,8 +386,8 @@ void shell() {
 /* --- Kernel entry --- */
 void kernel_main() {
     clear_screen();
-    print_string("Welcome to TuxOS!\n");
-    print_string("Version: Early 0.1.\n");
+    print_string("Welcome to TuxOS 0.2!\n");
+    print_string("Version: Early 0.2.\n");
     shell();
     while (1) {}
 }
