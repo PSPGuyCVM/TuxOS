@@ -7,7 +7,7 @@
 TuxOS is a minimal 32‑bit operating system for x86.  
 It has its own bootloader, a VGA text‑mode console, PS/2 keyboard driver with shift support, and a command‑line shell.
 
-**Version:** Early 0.1 (development preview)
+**Version:** Early 0.2 (development preview)
 
 ## Features
 
@@ -20,14 +20,22 @@ It has its own bootloader, a VGA text‑mode console, PS/2 keyboard driver with 
   - `echo <text>` – print text back
   - `clear` – clear the screen
   - `uname` – prints `TuxOS`
-  - `date` – shows a hardcoded date (real clock coming soon)
+  - `date` – shows a hardcoded date
   - `ls`, `pwd` – fake filesystem placeholders
-  - `ver` – version information
-  - `tux` – draws a small ASCII penguin
+  - `ver` / `about` – version and credits
+  - `tux` – draws an ASCII penguin
   - `shutdown` – power off (QEMU/Bochs/VirtualBox)
-  - `reboot` – reboot the machine
+  - `reboot` – reboot
+  - `calc <expr>` – simple integer calculator (+, -, *, /)
+  - `hex <decimal>` – convert decimal to hexadecimal
+  - `random` – display a pseudo‑random number (uses CPU timestamp)
+  - `ascii` – print the 7‑bit ASCII table
+  - `cowsay <message>` – a cow speaks your message
+  - `fortune` – print a random (fake) fortune
+  - `mem` / `uptime` – placeholders for future features
 - APM shutdown fallback
 - QEMU and real‑hardware bootable (via floppy image)
+- Automatic CI testing with GitHub Actions
 
 ## Building
 
@@ -80,12 +88,13 @@ sync
 | `kernel.c`         | Kernel: console, keyboard, shell             |
 | `linker.ld`        | Linker script (loads kernel at 0x10000)     |
 | `Makefile`         | Build automation                             |
+| `.github/workflows/ci.yml` | GitHub Actions CI workflow            |
 
 ## License
 
 This project is licensed under the **GNU General Public License v2.0** – see the [LICENSE](LICENSE) file for details.
 
-The 8×16 console font is derived from `font_sun8x16.c` in the Linux kernel, which is also licensed under the GPL‑v2.
+The 8×16 console font (if used in graphical versions) is derived from `font_sun8x16.c` in the Linux kernel, which is also licensed under the GPL‑v2.
 
 ## Author & Credits
 
