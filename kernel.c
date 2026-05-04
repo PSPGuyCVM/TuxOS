@@ -400,7 +400,7 @@ void pong_game() {
 
     while (1) {
         /* slow down */
-        for (volatile int i = 0; i < 500000; i++);
+        for (volatile int i = 0; i < 20000000; i++);
 
         /* read keyboard */
         int sc;
@@ -688,7 +688,7 @@ void shell() {
 void kernel_main() {
     clear_screen();
     print_string("Welcome to TuxOS 0.2.1!\n");
-    print_string("Version: Early 0.2ю\n");
+    print_string("Version: Early 0.2\n");
     shell();
     while (1) {}
 }
