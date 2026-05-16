@@ -371,7 +371,7 @@ void shell() {
         else if (!strcmp(cmd,"ls")) print_string("No filesystem.\n");
         else if (!strcmp(cmd,"pwd")) print_string("/\n");
         else if (!strcmp(cmd,"ver")||!strcmp(cmd,"about")) {
-            print_string("TuxOS version 0.3 (Early)\nMade by PSPGuyCVM\nNo GRUB, pure ASM + C\n");
+            print_string("TuxOS version 0.3 (Early)\nMade by TuxOSDev\nNo GRUB, pure ASM + C\n");
         }
         else if (!strcmp(cmd,"tux")) print_string("   .--.\n  |o_o |\n  |:_/ |\n //   \\ \\\n(|     | )\n/'\\_   _/`\\\n\\___)=(___/\n");
         else if (!strcmp(cmd,"shutdown")) { outw(0x604,0x2000); asm("cli; hlt"); }
